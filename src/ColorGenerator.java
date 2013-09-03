@@ -2,8 +2,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.GridLayout;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.List;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -16,11 +14,16 @@ import javax.swing.table.TableCellRenderer;
 public class ColorGenerator
         extends JPanel {
 
+
+    public static final double EPS = 0.1;
+
+
     public ColorGenerator() {
         super(new GridLayout(1, 0));
 
         final JTable table = new JTable(new MyTableModel());
         table.setDefaultRenderer(Object.class, new MyRenderer());
+        table.setRowHeight(60);
 
         JScrollPane scrollPane = new JScrollPane(table);
         add(scrollPane);
@@ -35,7 +38,7 @@ public class ColorGenerator
         newContentPane.setOpaque(true); // content panes must be opaque
         frame.setContentPane(newContentPane);
 
-        frame.pack();
+        frame.setSize(470, 1140);
         frame.setVisible(true);
     }
 
@@ -78,148 +81,138 @@ public class ColorGenerator
     class MyTableModel
             extends AbstractTableModel {
 
-        int MAX = 255;
-        int STEP = 15;
-        int COLUMNS = MAX / STEP + 1;
-        int ROWS = MAX / STEP;
-        private String[] columnNames = new String[]{"-255", "-192", "-128", "-64", "0", "64", "128", "192", "255"};
-//        private String[] columnNames = new String[]{"ColorS"};
-        private Object[][] data = generateRealSpectre();
+        private String[] columnNames = generateHeaders();
+        private Object[][] tableData = generateRealSpectre();
+
+
+        private String[] generateHeaders() {
+            String[] headers = new String[7];
+
+            for (int i = -3; i <= 3; i++) {
+                headers[i + 3] = "" + i;
+            }
+
+            return headers;
+        }
 
 
         private Object[][] generateRealSpectre() {
-            List<String> dataList_0 = new ArrayList<String>();
-            List<String> dataList_64 = new ArrayList<String>();
-            List<String> dataList_128 = new ArrayList<String>();
-            List<String> dataList_192 = new ArrayList<String>();
-            List<String> dataList_255 = new ArrayList<String>();
+            int steps = 3;
+            int colors = 3;
+            int halfTones = 3;
+            int rows = halfTones * 2 * colors;
+            int columns = steps * 2 + 1;
+            Object[][] data = new Object[rows][columns];
 
-            List<String> dataList_n64 = new ArrayList<String>();
-            List<String> dataList_n128 = new ArrayList<String>();
-            List<String> dataList_n192 = new ArrayList<String>();
-            List<String> dataList_n255 = new ArrayList<String>();
+            double red = 192;
+            double green = 64;
+            double blue = 64;
+            double step = 128. / 3.;
 
-            double red = 255;
-            double green = 0;
-            double blue = 0;
-            double step = 255. / 4.;
+            double minHalfTone = 64;
+            double maxHalfTone = 192;
+
+            double majorStep = 64 / 3;
+            double minorStep = 22 / 3;
+
+            int rowNr = 0;
 
             while (true) {
-                if (green == 255) {
+                if (Math.abs(maxHalfTone - green) < EPS) {
                     red -= step;
                 } else {
                     green += step;
                 }
 
-                String color_0 = MessageFormat.format("{0} {1} {2}", (int)red, (int)green, (int)blue);
-                String color_64 = MessageFormat.format("{0} {1} {2}",  (int)red, (int)green, 64);
-                String color_128 = MessageFormat.format("{0} {1} {2}", (int)red, (int)green, 128);
-                String color_192 = MessageFormat.format("{0} {1} {2}", (int)red, (int)green, 192);
-                String color_255 = MessageFormat.format("{0} {1} {2}", (int)red, (int)green, 255);
+                generateTones(steps, data, red, green, blue, rowNr, minorStep, majorStep, majorStep, majorStep, minorStep, minorStep);
 
-                String color_n64 = MessageFormat.format("{0} {1} {2}",  red == 255 ? (int)(red - 64 ) : (int)red, green == 255 && red != 255 ? (int)(green - 64 ) : (int)green, (int)blue);
-                String color_n128 = MessageFormat.format("{0} {1} {2}", red == 255 ? (int)(red - 128) : (int)red, green == 255 && red != 255 ? (int)(green - 128) : (int)green, (int)blue);
-                String color_n192 = MessageFormat.format("{0} {1} {2}", red == 255 ? (int)(red - 192) : (int)red, green == 255 && red != 255 ? (int)(green - 192) : (int)green, (int)blue);
-                String color_n255 = MessageFormat.format("{0} {1} {2}", red == 255 ? (int)(red - 255) : (int)red, green == 255 && red != 255 ? (int)(green - 255) : (int)green, (int)blue);
-
-                dataList_0.add(color_0);
-                dataList_64.add(color_64);
-                dataList_128.add(color_128);
-                dataList_192.add(color_192);
-                dataList_255.add(color_255);
-
-                dataList_n64.add(color_n64);
-                dataList_n128.add(color_n128);
-                dataList_n192.add(color_n192);
-                dataList_n255.add(color_n255);
-
-                if (red == 0) {
+                rowNr++;
+                if (Math.abs(minHalfTone - red) < EPS) {
                     break;
                 }
             }
 
             while (true) {
-                if (blue == 255) {
+                if (Math.abs(maxHalfTone - blue) < EPS) {
                     green -= step;
                 } else {
                     blue += step;
                 }
 
-                String color_0 = MessageFormat.format("{0} {1} {2}", (int)red, (int)green, (int)blue);
-                String color_64 = MessageFormat.format("{0} {1} {2}", 64,   (int)green, (int)blue);
-                String color_128 = MessageFormat.format("{0} {1} {2}", 128, (int)green, (int)blue);
-                String color_192 = MessageFormat.format("{0} {1} {2}", 192, (int)green, (int)blue);
-                String color_255 = MessageFormat.format("{0} {1} {2}", 255, (int)green, (int)blue);
+                generateTones(steps, data, red, green, blue, rowNr, majorStep, minorStep, majorStep, minorStep, majorStep, minorStep);
 
-                String color_n64 = MessageFormat.format("{0} {1} {2}",  (int)red, green == 255 ? (int)(green - 64 ) : (int)green, blue == 255 && green != 255 ? (int)(blue - 64 ) : (int)blue);
-                String color_n128 = MessageFormat.format("{0} {1} {2}", (int)red, green == 255 ? (int)(green - 128) : (int)green, blue == 255 && green != 255 ? (int)(blue - 128) : (int)blue);
-                String color_n192 = MessageFormat.format("{0} {1} {2}", (int)red, green == 255 ? (int)(green - 192) : (int)green, blue == 255 && green != 255 ? (int)(blue - 192) : (int)blue);
-                String color_n255 = MessageFormat.format("{0} {1} {2}", (int)red, green == 255 ? (int)(green - 255) : (int)green, blue == 255 && green != 255 ? (int)(blue - 255) : (int)blue);
-
-                dataList_0.add(color_0);
-                dataList_64.add(color_64);
-                dataList_128.add(color_128);
-                dataList_192.add(color_192);
-                dataList_255.add(color_255);
-
-                dataList_n64.add(color_n64);
-                dataList_n128.add(color_n128);
-                dataList_n192.add(color_n192);
-                dataList_n255.add(color_n255);
-
-                if (green == 0) {
+                rowNr++;
+                if (Math.abs(minHalfTone - green) < EPS) {
                     break;
                 }
             }
 
             while (true) {
 
-                if (red == 255) {
+                if (Math.abs(maxHalfTone - red) < EPS) {
                     blue -= step;
                 } else {
                     red += step;
                 }
 
-                String color_0 = MessageFormat.format("{0} {1} {2}", (int)red, (int)green, (int)blue);
-                String color_64 = MessageFormat.format("{0} {1} {2}",  (int)red, 64,  (int)blue);
-                String color_128 = MessageFormat.format("{0} {1} {2}", (int)red, 128, (int)blue);
-                String color_192 = MessageFormat.format("{0} {1} {2}", (int)red, 192, (int)blue);
-                String color_255 = MessageFormat.format("{0} {1} {2}", (int)red, 255, (int)blue);
+                generateTones(steps, data, red, green, blue, rowNr, majorStep, majorStep, minorStep, minorStep, minorStep, majorStep);
 
-                String color_n64 = MessageFormat.format("{0} {1} {2}",  red == 255 && blue != 255 ? (int)(red - 64 ) : (int)red, (int)green, blue == 255 ? (int)(blue - 64 ) : (int)blue);
-                String color_n128 = MessageFormat.format("{0} {1} {2}", red == 255 && blue != 255 ? (int)(red - 128) : (int)red, (int)green, blue == 255 ? (int)(blue - 128) : (int)blue);
-                String color_n192 = MessageFormat.format("{0} {1} {2}", red == 255 && blue != 255 ? (int)(red - 192) : (int)red, (int)green, blue == 255 ? (int)(blue - 192) : (int)blue);
-                String color_n255 = MessageFormat.format("{0} {1} {2}", red == 255 && blue != 255 ? (int)(red - 255) : (int)red, (int)green, blue == 255 ? (int)(blue - 255) : (int)blue);
-
-                dataList_0.add(color_0);
-                dataList_64.add(color_64);
-                dataList_128.add(color_128);
-                dataList_192.add(color_192);
-                dataList_255.add(color_255);
-
-                dataList_n64.add(color_n64);
-                dataList_n128.add(color_n128);
-                dataList_n192.add(color_n192);
-                dataList_n255.add(color_n255);
-
-                if (blue == 0) {
+                rowNr++;
+                if (Math.abs(minHalfTone - blue) < EPS) {
                     break;
                 }
             }
 
-            Object[][] data = new Object[dataList_0.size()][9];
-            for (int i = 0; i < dataList_0.size(); i++) {
-                data[i][0] = dataList_n255.get(i);
-                data[i][1] = dataList_n192.get(i);
-                data[i][2] = dataList_n128.get(i);
-                data[i][3] = dataList_n64.get(i);
-                data[i][4] = dataList_0.get(i);
-                data[i][5] = dataList_64.get(i);
-                data[i][6] = dataList_128.get(i);
-                data[i][7] = dataList_192.get(i);
-                data[i][8] = dataList_255.get(i);
-            }
+            mix(data);
+
             return data;
+        }
+
+
+        private void mix(Object[][] data) {
+            int pos = 1;
+            for (int i = 3; i < data.length; i = i + 3) {
+                Object[] tmp = data[i];
+                shift(data, pos, i);
+                data[pos] = tmp;
+                pos++;
+            }
+            for (int i = pos; i < data.length; i = i + 2) {
+                Object[] tmp = data[i];
+                shift(data, pos, i);
+                data[pos] = tmp;
+                pos++;
+            }
+        }
+
+
+        private void shift(Object[][] data, int startPos, int endPos) {
+            for (int i = endPos; i > startPos; i--) {
+                data[i] = data[i - 1];
+            }
+        }
+
+
+        private void generateTones(int aSteps, Object[][] aData, double aRed, double aGreen, double aBlue, int aRowNr,
+                                   double redInc, double greenInc, double blueInc,
+                                   double redDec, double greenDec, double blueDec) {
+            int columnNr = 0;
+            for (int i = aSteps; i > 0; i--) {
+                double redTone = aRed + redInc * i;
+                double greenTone = aGreen + greenInc * i;
+                double blueTone = aBlue + blueInc * i;
+                aData[aRowNr][columnNr++] = MessageFormat.format("{0} {1} {2}", (int)redTone, (int)greenTone, (int)blueTone);
+            }
+
+            String color = MessageFormat.format("{0} {1} {2}", (int)aRed, (int)aGreen, (int)aBlue);
+            aData[aRowNr][columnNr++] = color;
+
+            for (int i = 1; i <= aSteps; i++) {
+                double redTone = aRed - redDec * i;
+                double greenTone = aGreen - greenDec * i;
+                double blueTone = aBlue - blueDec * i;
+                aData[aRowNr][columnNr++] = MessageFormat.format("{0} {1} {2}", (int)redTone, (int)greenTone, (int)blueTone);
+            }
         }
 
 
@@ -229,12 +222,12 @@ public class ColorGenerator
 
 
         public int getRowCount() {
-            return data.length;
+            return tableData.length;
         }
 
 
         public Object getValueAt(int row, int col) {
-            return data[row][col];
+            return tableData[row][col];
         }
 
 
