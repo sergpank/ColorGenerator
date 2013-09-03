@@ -1,7 +1,6 @@
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.GridLayout;
-import java.text.MessageFormat;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -10,6 +9,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
+
 
 public class ColorGenerator
         extends JPanel {
@@ -63,16 +63,7 @@ public class ColorGenerator
                                                        int row,
                                                        int column) {
             JTextField editor = new JTextField();
-            if (value != null) {
-                editor.setText(value.toString());
-            }
-
-            String[] values = ((String)table.getValueAt(row, column)).split(" ");
-            int red = Integer.parseInt(values[0]);
-            int green = Integer.parseInt(values[1]);
-            int blue = Integer.parseInt(values[2]);
-
-            Color color = new Color(red, green, blue);
+            Color color = (Color)table.getValueAt(row, column);
             editor.setBackground(color);
             return editor;
         }
@@ -102,52 +93,38 @@ public class ColorGenerator
             int halfTones = 3;
             int rows = halfTones * 2 * colors;
             int columns = steps * 2 + 1;
-            Object[][] data = new Object[rows][columns];
+            Color[][] data = new Color[rows][columns];
 
             double red = 192;
             double green = 64;
             double blue = 64;
             double step = 128. / 3.;
 
-            double minHalfTone = 64;
             double maxHalfTone = 192;
-
-            double majorStep = 64 / 3;
-            double minorStep = 22 / 3;
 
             int rowNr = 0;
 
-            while (true) {
+            for(; rowNr < 6; rowNr++) {
                 if (Math.abs(maxHalfTone - green) < EPS) {
                     red -= step;
                 } else {
                     green += step;
                 }
 
-                generateTones(steps, data, red, green, blue, rowNr, minorStep, majorStep, majorStep, majorStep, minorStep, minorStep);
-
-                rowNr++;
-                if (Math.abs(minHalfTone - red) < EPS) {
-                    break;
-                }
+                data[rowNr] = generateTones(red, green, blue, new HalfToneSteps().getRedSteps());
             }
 
-            while (true) {
+            for(; rowNr < 12; rowNr++) {
                 if (Math.abs(maxHalfTone - blue) < EPS) {
                     green -= step;
                 } else {
                     blue += step;
                 }
 
-                generateTones(steps, data, red, green, blue, rowNr, majorStep, minorStep, majorStep, minorStep, majorStep, minorStep);
-
-                rowNr++;
-                if (Math.abs(minHalfTone - green) < EPS) {
-                    break;
-                }
+                data[rowNr] = generateTones(red, green, blue, new HalfToneSteps().getGreenSteps());
             }
 
-            while (true) {
+            for(; rowNr < 18; rowNr++) {
 
                 if (Math.abs(maxHalfTone - red) < EPS) {
                     blue -= step;
@@ -155,12 +132,7 @@ public class ColorGenerator
                     red += step;
                 }
 
-                generateTones(steps, data, red, green, blue, rowNr, majorStep, majorStep, minorStep, minorStep, minorStep, majorStep);
-
-                rowNr++;
-                if (Math.abs(minHalfTone - blue) < EPS) {
-                    break;
-                }
+                data[rowNr] = generateTones(red, green, blue, new HalfToneSteps().getBueSteps());
             }
 
             mix(data);
@@ -171,17 +143,17 @@ public class ColorGenerator
 
         private void mix(Object[][] data) {
             int pos = 1;
-            for (int i = 3; i < data.length; i = i + 3) {
-                Object[] tmp = data[i];
-                shift(data, pos, i);
-                data[pos] = tmp;
-                pos++;
-            }
-            for (int i = pos; i < data.length; i = i + 2) {
-                Object[] tmp = data[i];
-                shift(data, pos, i);
-                data[pos] = tmp;
-                pos++;
+            int step = 3;
+            int start = 3;
+            for (int runs = 0; runs < 2; runs++) {
+                for (int i = start; i < data.length; i = i + step) {
+                    Object[] tmp = data[i];
+                    shift(data, pos, i);
+                    data[pos] = tmp;
+                    pos++;
+                }
+                start = pos;
+                step--;
             }
         }
 
@@ -193,26 +165,27 @@ public class ColorGenerator
         }
 
 
-        private void generateTones(int aSteps, Object[][] aData, double aRed, double aGreen, double aBlue, int aRowNr,
-                                   double redInc, double greenInc, double blueInc,
-                                   double redDec, double greenDec, double blueDec) {
+        private Color[] generateTones(double aRed, double aGreen, double aBlue, Steps steps) {
+            Color[] data = new Color[7];
             int columnNr = 0;
-            for (int i = aSteps; i > 0; i--) {
-                double redTone = aRed + redInc * i;
-                double greenTone = aGreen + greenInc * i;
-                double blueTone = aBlue + blueInc * i;
-                aData[aRowNr][columnNr++] = MessageFormat.format("{0} {1} {2}", (int)redTone, (int)greenTone, (int)blueTone);
+            for (int i = 3; i > 0; i--) {
+                double redTone = aRed + steps.getRedInc() * i;
+                double greenTone = aGreen + steps.getGreenInc() * i;
+                double blueTone = aBlue + steps.getBlueInc() * i;
+                data[columnNr++] = new Color((int)redTone, (int)greenTone, (int)blueTone);
             }
 
-            String color = MessageFormat.format("{0} {1} {2}", (int)aRed, (int)aGreen, (int)aBlue);
-            aData[aRowNr][columnNr++] = color;
+            Color color = new Color((int)aRed, (int)aGreen, (int)aBlue);
+            data[columnNr++] = color;
 
-            for (int i = 1; i <= aSteps; i++) {
-                double redTone = aRed - redDec * i;
-                double greenTone = aGreen - greenDec * i;
-                double blueTone = aBlue - blueDec * i;
-                aData[aRowNr][columnNr++] = MessageFormat.format("{0} {1} {2}", (int)redTone, (int)greenTone, (int)blueTone);
+            for (int i = 1; i <= 3; i++) {
+                double redTone = aRed - steps.getRedDec() * i;
+                double greenTone = aGreen - steps.getGreenDec() * i;
+                double blueTone = aBlue - steps.getBlueDec() * i;
+                data[columnNr++] = new Color((int)redTone, (int)greenTone, (int)blueTone);
             }
+
+            return data;
         }
 
 
@@ -236,4 +209,113 @@ public class ColorGenerator
         }
     }
 
+    class HalfToneSteps {
+
+        private final double MAJOR_STEP = 64 / 3;
+        private final double MINOR_STEP = 22 / 3;
+        private final Steps RED_STEPS;
+        private final Steps GREEN_STEPS;
+        private final Steps BLUE_STEPS;
+
+
+        public HalfToneSteps() {
+            RED_STEPS = new Steps().setRedInc(MINOR_STEP).setGreenInc(MAJOR_STEP).setBlueInc(MAJOR_STEP)
+                                   .setRedDec(MAJOR_STEP).setGreenDec(MINOR_STEP).setBlueDec(MINOR_STEP);
+            GREEN_STEPS = new Steps().setRedInc(MAJOR_STEP).setGreenInc(MINOR_STEP).setBlueInc(MAJOR_STEP)
+                                     .setRedDec(MINOR_STEP).setGreenDec(MAJOR_STEP).setBlueDec(MINOR_STEP);
+            BLUE_STEPS = new Steps().setRedInc(MAJOR_STEP).setGreenInc(MAJOR_STEP).setBlueDec(MINOR_STEP)
+                                    .setRedDec(MINOR_STEP).setGreenInc(MINOR_STEP).setBlueInc(MAJOR_STEP);
+        }
+
+
+        public Steps getRedSteps() {
+            return RED_STEPS;
+        }
+
+
+        public Steps getGreenSteps() {
+            return GREEN_STEPS;
+        }
+
+
+        public Steps getBueSteps() {
+            return BLUE_STEPS;
+        }
+    }
+
+    class Steps {
+
+        private double redInc;
+        private double greenInc;
+        private double blueInc;
+        private double redDec;
+        private double greenDec;
+        private double blueDec;
+
+
+        double getRedInc() {
+            return redInc;
+        }
+
+
+        Steps setRedInc(double aRedInc) {
+            redInc = aRedInc;
+            return this;
+        }
+
+
+        double getGreenInc() {
+            return greenInc;
+        }
+
+
+        Steps setGreenInc(double aGreenInc) {
+            greenInc = aGreenInc;
+            return this;
+        }
+
+
+        double getBlueInc() {
+            return blueInc;
+        }
+
+
+        Steps setBlueInc(double aBlueInc) {
+            blueInc = aBlueInc;
+            return this;
+        }
+
+
+        double getRedDec() {
+            return redDec;
+        }
+
+
+        Steps setRedDec(double aRedDec) {
+            redDec = aRedDec;
+            return this;
+        }
+
+
+        double getGreenDec() {
+            return greenDec;
+        }
+
+
+        Steps setGreenDec(double aGreenDec) {
+            greenDec = aGreenDec;
+            return this;
+        }
+
+
+        double getBlueDec() {
+            return blueDec;
+        }
+
+
+        Steps setBlueDec(double aBlueDec) {
+            blueDec = aBlueDec;
+            return this;
+        }
+    }
 }
