@@ -9,9 +9,29 @@ public class ColorGenerator {
     public static final int ONE_THIRD = 6;
     public static final int TWO_THIRDS = 12;
     public static final int THREE_THIRDS = 18;
+    private static int row;
+    private static int col;
+    private final Color[][] colorTable;
 
 
-    public Color[][] generateColorTable() {
+    public ColorGenerator() {
+        colorTable = generateColorTable();
+    }
+
+
+    public Color nextColor() {
+        if (row == colorTable.length) {
+            row = 0;
+            col++;
+        }
+        if (col == colorTable[0].length) {
+            col = 0;
+        }
+        return colorTable[row++][col];
+    }
+
+
+    private Color[][] generateColorTable() {
         int steps = 3;
         int colors = 3;
         int halfTones = 3;

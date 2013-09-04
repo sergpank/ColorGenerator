@@ -70,12 +70,24 @@ public class ColorGeneratorVisualizer
             extends AbstractTableModel {
 
         private String[] columnNames = generateHeaders();
-        private Object[][] tableData = new ColorGenerator().generateColorTable();
+        private Object[][] tableData = generateData();
 
 
         private String[] generateHeaders() {
             String[] headers = new String[]{"A", "B", "C", "D"};
             return headers;
+        }
+
+
+        private Object[][] generateData(){
+            ColorGenerator gen = new ColorGenerator();
+            Color[][] data = new Color[18][4];
+            for(int i = 0; i < 4; i++){
+                for(int j = 0; j < 18; j++){
+                    data[j][i] = gen.nextColor();
+                }
+            }
+            return data;
         }
 
 
